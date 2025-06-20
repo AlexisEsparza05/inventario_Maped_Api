@@ -111,18 +111,21 @@ const obtenerInventariosPaginados = async (req, res) => {
       return res.status(404).json({ error: 'No hay inventarios disponibles' });
     }
 
-    const todos = snapshot.docs.map(doc => ({
-      id: doc.data().id,
-      name: doc.data().nombre || 'Sin nombre',
-    }));
+    // Mapeamos todos los inventarios
+    const todos = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: data.id || doc.id,
+        name: data.nombre || 'Sin nombre',
+      };
+    });
 
-    // Ordenar alfabéticamente por nombre
+    // Ordenamos por nombre alfabéticamente
     todos.sort((a, b) => a.name.localeCompare(b.name));
 
-    // Paginación manual
+    // Aplicamos la paginación manual
     const inicio = page * limit;
-    const fin = inicio + limit;
-    const paginados = todos.slice(inicio, fin);
+    const paginados = todos.slice(inicio, inicio + limit);
 
     return res.status(200).json(paginados);
   } catch (error) {
