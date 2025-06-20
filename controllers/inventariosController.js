@@ -67,7 +67,7 @@ const obtenerInventarios = async (req, res) => {
     }
 
     const inventarios = snapshot.docs.map(doc => ({
-      id: doc.id,
+      firebaseDocId: doc.id,
       ...doc.data(),
     }));
 
@@ -89,17 +89,16 @@ const obtenerInventarioPorCampoId = async (req, res) => {
 
     const inventarioDoc = snapshot.docs[0];
     res.status(200).json({ 
-      id: inventarioDoc.data().id,   // aquí usamos el campo id, no doc.id
+      id: inventarioDoc.data().id,
       nombre: inventarioDoc.data().nombre,
       productos: inventarioDoc.data().productos,
-      // ...otros campos si los hay
+      // agrega otros campos que quieras enviar
     });
   } catch (error) {
     console.error('Error al obtener inventario por campo id:', error);
     res.status(500).json({ error: 'Error al obtener inventario por campo id' });
   }
 };
-
 
 const obtenerInventariosPaginados = async (req, res) => {
   try {
@@ -113,11 +112,11 @@ const obtenerInventariosPaginados = async (req, res) => {
       .get();
 
     const items = snapshot.docs.map(doc => ({
-      id: doc.id,
+      id: doc.data().id,       // el campo personalizado id
       name: doc.data().nombre || 'Sin nombre',
     }));
 
-    res.status(200).json({ items });
+    res.status(200).json(items); // devuelvo directamente array, no {items: []}
   } catch (error) {
     console.error('Error al obtener inventarios paginados:', error);
     res.status(500).json({ error: 'Error al obtener inventarios paginados' });
@@ -127,16 +126,23 @@ const obtenerInventariosPaginados = async (req, res) => {
 const editarNombreInventario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const { nombre } = req.body;
 
-    if (!name) {
+    if (!nombre || nombre.trim() === '') {
       return res.status(400).json({ error: 'El nuevo nombre es obligatorio' });
     }
 
-    const docRef = db.collection('inventarios').doc(id);
-    await docRef.update({ nombre: name });
+    const snapshot = await db.collection('inventarios').where('id', '==', id).get();
 
-    res.status(200).json({ id, name, actualizado: true });
+    if (snapshot.empty) {
+      return res.status(404).json({ error: 'Inventario no encontrado' });
+    }
+
+    const docRef = snapshot.docs[0].ref;
+
+    await docRef.update({ nombre });
+
+    res.status(200).json({ id, nombre, actualizado: true });
   } catch (error) {
     console.error('Error al editar nombre:', error);
     res.status(500).json({ error: 'Error al editar el nombre del inventario' });
@@ -146,7 +152,17 @@ const editarNombreInventario = async (req, res) => {
 const eliminarInventario = async (req, res) => {
   try {
     const { id } = req.params;
-    await db.collection('inventarios').doc(id).delete();
+
+    const snapshot = await db.collection('inventarios').where('id', '==', id).get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ error: 'Inventario no encontrado' });
+    }
+
+    const docRef = snapshot.docs[0].ref;
+
+    await docRef.delete();
+
     res.status(200).json({ eliminado: true });
   } catch (error) {
     console.error('Error al eliminar inventario:', error);
