@@ -80,7 +80,7 @@ const obtenerInventarios = async (req, res) => {
 
 const obtenerInventarioPorCampoId = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params; // id es el campo personalizado, ej. "1750211233"
     const snapshot = await db.collection('inventarios').where('id', '==', id).get();
 
     if (snapshot.empty) {
@@ -88,12 +88,18 @@ const obtenerInventarioPorCampoId = async (req, res) => {
     }
 
     const inventarioDoc = snapshot.docs[0];
-    res.status(200).json({ id: inventarioDoc.id, ...inventarioDoc.data() });
+    res.status(200).json({ 
+      id: inventarioDoc.data().id,   // aquí usamos el campo id, no doc.id
+      nombre: inventarioDoc.data().nombre,
+      productos: inventarioDoc.data().productos,
+      // ...otros campos si los hay
+    });
   } catch (error) {
     console.error('Error al obtener inventario por campo id:', error);
     res.status(500).json({ error: 'Error al obtener inventario por campo id' });
   }
 };
+
 
 const obtenerInventariosPaginados = async (req, res) => {
   try {
