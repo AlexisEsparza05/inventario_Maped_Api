@@ -105,23 +105,32 @@ const obtenerInventariosPaginados = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 0;
 
-    const snapshot = await db.collection('inventarios')
-      .orderBy('nombre')
-      .offset(page * limit)
-      .limit(limit)
-      .get();
+    const snapshot = await db.collection('inventarios').get();
 
-    const items = snapshot.docs.map(doc => ({
-      id: doc.data().id,       // el campo personalizado id
+    if (snapshot.empty) {
+      return res.status(404).json({ error: 'No hay inventarios disponibles' });
+    }
+
+    const todos = snapshot.docs.map(doc => ({
+      id: doc.data().id,
       name: doc.data().nombre || 'Sin nombre',
     }));
 
-    res.status(200).json(items); // devuelvo directamente array, no {items: []}
+    // Ordenar alfabéticamente por nombre
+    todos.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Paginación manual
+    const inicio = page * limit;
+    const fin = inicio + limit;
+    const paginados = todos.slice(inicio, fin);
+
+    return res.status(200).json(paginados);
   } catch (error) {
     console.error('Error al obtener inventarios paginados:', error);
     res.status(500).json({ error: 'Error al obtener inventarios paginados' });
   }
 };
+
 
 const editarNombreInventario = async (req, res) => {
   try {
